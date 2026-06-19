@@ -11,7 +11,7 @@ from collections import Counter
 from nltk.util import ngrams
 
 # --- KONFIGURASI HALAMAN ---
-st.set_page_config(page_title="Analisis Sentimen Play Store", layout="wide")
+st.set_page_config(page_title="ULAS-AI", layout="wide")
 
 # --- FUNGSI LOAD PAYLOAD MODEL (Updated) ---
 @st.cache_resource
@@ -56,7 +56,7 @@ with col2:
     jumlah_data = st.selectbox(
         "Jumlah Data",
         [500, 1000, 2000, 5000, 10000],
-        index=0  # default 1000
+        index=0  # default 500
     )
     
 mulai_btn = st.button("Mulai Analisis", type="primary")
@@ -163,9 +163,6 @@ if mulai_btn and app_input:
                         )
             negatif_pct = sentiment_percent['Negatif']
             positif_pct = sentiment_percent['Positif']
-            # kata_pos = " ".join(
-            #     df[df['sentiment']=='Positif']['cleaned_content']
-            # ).split()
 
             kata_neg = " ".join(
                 df[df['sentiment']=='Negatif']['cleaned_content']
