@@ -189,7 +189,7 @@ if mulai_btn and app_input:
                 negatif_pct = sentiment_percent['Negatif']
 
                 st.info(f"""
-                **Interpretasi Distribusi Sentimen**
+                #### **Interpretasi Distribusi Sentimen**
 
                 Dari seluruh ulasan yang dianalisis:
 
@@ -242,7 +242,7 @@ if mulai_btn and app_input:
                     kualitas_model = "perlu dievaluasi lebih lanjut"
                 
                 st.info(f"""
-                    ### Interpretasi Tingkat Keyakinan Model
+                    #### Interpretasi Tingkat Keyakinan Model
 
                     Model menunjukkan tingkat keyakinan yang cukup tinggi terhadap hasil klasifikasi.
 
@@ -316,7 +316,7 @@ if mulai_btn and app_input:
             versi_tertinggi = keluhan_versi.iloc[0]
 
             st.info(f"""
-            **Interpretasi Grafik Keluhan Berdasarkan Versi**
+            #### **Interpretasi Grafik Keluhan Berdasarkan Versi**
 
             Grafik menunjukkan persentase ulasan negatif pada setiap versi aplikasi.
 
