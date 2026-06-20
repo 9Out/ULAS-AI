@@ -3,7 +3,8 @@ import pandas as pd
 import joblib
 import re
 import matplotlib.pyplot as plt
-from google_play_scraper import Sort, reviews
+from google_play_scraper import Sort, reviews, app
+from urllib.parse import urlparse, parse_qs
 import plotly.express as px
 from wordcloud import WordCloud
 from preprocess import preprocess_playstore
@@ -29,26 +30,88 @@ model = payload['pipeline']
 metadata = payload['metadata']
 env_info = payload['env']
 
-# --- FUNGSI EKSTRAK ID APLIKASI ---
-def get_app_id(url_or_id):
-    """Mengekstrak App ID dari URL (misal: https://play.google.com/store/apps/details?id=com.duolingo)"""
-    match = re.search(r'id=([a-zA-Z0-9._]+)', url_or_id)
-    if match:
-        return match.group(1)
-    return url_or_id.strip()
+# --- FUNGSI EKSTRAK ID APLIKASI ---def get_app_id(input_user):
+def get_app_info(input_user):
+    """
+    Mendukung:
+    1. URL Play Store
+    2. App ID langsung
+    """
+
+    if not input_user:
+        return None
+
+    input_user = input_user.strip()
+
+    app_id = None
+    # ==========================
+    # 1. URL Play Store
+    # ==========================
+    if "play.google.com" in input_user:
+
+        try:
+            parsed = urlparse(input_user)
+            params = parse_qs(parsed.query)
+
+            app_id = params.get("id", [None])[0]
+
+            if app_id:
+                st.toast(f"🔗 URL terdeteksi: {app_id}")
+
+        except Exception:
+            pass
+
+    # ==========================
+    # 2. App ID langsung
+    # ==========================
+    if not app_id:
+
+        match = re.search(r'id=([a-zA-Z0-9._]+)', input_user)
+
+        if match:
+            app_id = match.group(1)
+            st.toast(f"🔎 App ID terdeteksi: {app_id}")
+    
+    if not app_id:
+
+        app_id_pattern = r"^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+$"
+
+        if re.match(app_id_pattern, input_user):
+            app_id = input_user
+            st.toast(f"📦 App ID terdeteksi: {app_id}")
+
+    if not app_id:
+        return None
+    
+    # ==========================
+    # 3. Validasi ke Play Store
+    # ==========================
+    try:
+
+        info = app(
+            app_id,
+            lang="id",
+            country="id"
+        )
+
+        return info
+
+    except Exception:
+        return None
+
 
 # --- UI UTAMA ---
 col_head, col_spacer = st.columns([4, 1])
 with col_head:
     st.title("📊 Analisis Sentimen Aplikasi Play Store")
-    st.write("Masukkan Link atau ID aplikasi untuk melihat analisis sentimen dari ulasan terbaru penggunanya.")
+    st.write("Masukkan Link URL play store atau ID aplikasi untuk melihat analisis sentimen dari ulasan terbaru penggunanya.")
 
 # Input App ID dan Jumlah Data
 col1, col2 = st.columns([4, 1])
 
 with col1:
     app_input = st.text_input(
-        "Link / ID Aplikasi Play Store (contoh: com.duolingo)",
+        "Link URL / ID Aplikasi Play Store (contoh: com.duolingo)",
         ""
     )
 
@@ -58,6 +121,49 @@ with col2:
         [500, 1000, 2000, 5000, 10000],
         index=0  # default 500
     )
+    
+# kolom bantuan
+with st.expander("❓ Bantuan Pengguna"):
+    tab_cara, tab_format = st.tabs(["📖 Cara Mencari", "📋 Format Input"])
+    
+    with tab_cara:
+        st.link_button(
+            "🔍 Buka Google Play Store",
+            "https://play.google.com/store"
+        )
+        
+        st.markdown("""
+        **Cara mendapatkannya:**
+        1. Cari aplikasi di Google Play Store.
+        2. Buka halaman aplikasi.
+        3. Salin URL halaman aplikasi.
+        4. Jika menggunakan aplikasi Play Store di HP, pilih **Bagikan (Share)** lalu **Salin Tautan (Copy Link)**.
+        5. Jika hanya ingin menggunakan ID aplikasi, ambil teks setelah `id=`.
+
+        Contoh:
+        ```
+        https://play.google.com/store/apps/details?id=com.duolingo
+        ```
+        ID aplikasinya adalah:
+        ```
+        com.duolingo
+        ```
+        """)
+    
+    with tab_format:
+        st.markdown("""           
+        Anda dapat memasukkan:
+
+        **1. Link Play Store**
+        - https://play.google.com/store/apps/details?id=com.duolingo
+        - https://play.google.com/store/apps/details?id=com.naver.linewebtoon
+
+        **2. ID aplikasi**
+        - com.duolingo
+        - id=com.mobile.legends
+
+        Sistem akan mendeteksi format input secara otomatis.
+        """)
     
 mulai_btn = st.button("Mulai Analisis", type="primary")
 
@@ -84,10 +190,58 @@ with st.sidebar:
 
 # --- LOGIKA ANALISIS ---
 if mulai_btn and app_input:
-    app_id = get_app_id(app_input)
+    if not app_input.strip():
+        st.warning("Masukkan Link/URL Play Store yang berisi ID aplikasi, atau App ID terlebih dahulu.")
+        st.stop()
+
+    info_app = get_app_info(app_input)
+
+    if not info_app:
+        st.error(
+            "Aplikasi tidak ditemukan di Google Play Store atau App ID tidak valid."
+        )
+        st.error(
+            "Coba cek kembali ID aplikasi atau masukkan URL Play Store yang berisi ID aplikasi."
+        )
+        st.stop()
+        
+    app_id = info_app["appId"]
+    judul = info_app["title"]
+    icon = info_app["icon"]
+    genre = info_app["genre"]
+    
+    # PENGENALAN APLIKASI
+    st.markdown("### 📱 Informasi Aplikasi")
+
+    col1, col2 = st.columns([1, 4])
+
+    with col1:
+        st.image(icon, width=160)
+
+    with col2:
+        st.markdown(
+            f"#### {judul}"
+        )
+        st.markdown(
+            f"**Genre:** {genre}"
+        )
+        st.markdown(
+            f"**Rating:** ⭐ {info_app.get('score', '-'):.2f}"
+        )
+        installs = info_app.get("installs", "-")
+
+        st.markdown(
+            f"**Jumlah Instalasi:** {installs}"
+        )
+            
+    deskripsi = info_app.get("description", "")
+    
+    if len(deskripsi) > 1000:
+        deskripsi = deskripsi[:600] + "..."
+    st.info(deskripsi)
     
     # Animasi Loading
-    with st.spinner(f'Sedang mengambil {jumlah_data} ulasan data dari {app_id}, membersihkan teks alay, dan menganalisis sentimen... 🚀'):
+    with st.spinner(f'Sedang mengambil {jumlah_data} ulasan data dari {judul}, membersihkan teks alay, dan menganalisis sentimen... 🚀'):
         try:
             # 1. Scraping Data Play Store
             result, _ = reviews(
@@ -213,18 +367,18 @@ if mulai_btn and app_input:
                 # Statistik confidence positif
                 pos_conf = df[df['sentiment']=='Positif']['confidence']
 
-                avg_pos = pos_conf.mean()
-                med_pos = pos_conf.median()
-                min_pos = pos_conf.min()
-                max_pos = pos_conf.max()
+                avg_pos = (pos_conf.mean() * 100)
+                med_pos = (pos_conf.median() * 100)
+                min_pos = (pos_conf.min() * 100)
+                max_pos = (pos_conf.max() * 100)
 
                 # Statistik confidence negatif
                 neg_conf = df[df['sentiment']=='Negatif']['confidence']
 
-                avg_neg = neg_conf.mean()
-                med_neg = neg_conf.median()
-                min_neg = neg_conf.min()
-                max_neg = neg_conf.max()
+                avg_neg = (neg_conf.mean() * 100)
+                med_neg = (neg_conf.median() * 100)
+                min_neg = (neg_conf.min() * 100)
+                max_neg = (neg_conf.max() * 100)
 
                 # Confidence tinggi
                 high_conf_pct = (
@@ -232,14 +386,23 @@ if mulai_btn and app_input:
                     / len(df)
                 ) * 100
                 
+                # Untuk membuat Kesimpulan
                 if high_conf_pct >= 90:
-                    kualitas_model = "sangat tinggi"
+                    kualitas_model = "sangat yakin terhadap hampir seluruh hasil klasifikasi"
                 elif high_conf_pct >= 75:
-                    kualitas_model = "tinggi"
+                    kualitas_model = "cukup konsisten dan yakin dalam melakukan klasifikasi"
                 elif high_conf_pct >= 60:
-                    kualitas_model = "cukup baik"
+                    kualitas_model = "memiliki tingkat keyakinan yang cukup baik, meskipun masih terdapat sejumlah prediksi dengan keyakinan rendah"
                 else:
-                    kualitas_model = "perlu dievaluasi lebih lanjut"
+                    kualitas_model = "menunjukkan variasi keyakinan yang cukup besar sehingga beberapa prediksi perlu ditinjau lebih lanjut"
+                
+                # kesimpulan model
+                if avg_pos > avg_neg + 0.1:
+                    perbandingan = "Model cenderung lebih yakin saat mengidentifikasi ulasan positif dibandingkan ulasan negatif."
+                elif avg_neg > avg_pos + 0.1:
+                    perbandingan = "Model cenderung lebih yakin saat mengidentifikasi ulasan negatif dibandingkan ulasan positif."
+                else:
+                    perbandingan = "Tingkat keyakinan model pada sentimen positif dan negatif relatif seimbang."
                 
                 st.info(f"""
                     #### Interpretasi Tingkat Keyakinan Model
@@ -247,37 +410,18 @@ if mulai_btn and app_input:
                     Model menunjukkan tingkat keyakinan yang cukup tinggi terhadap hasil klasifikasi.
 
                     📈 **Sentimen Positif**
-                    - Rata-rata skor keyakinan: **{avg_pos:.3f}**
-                    - Median: **{med_pos:.3f}**
-                    - Rentang skor: **{min_pos:.3f} – {max_pos:.3f}**
+                    - Rata-rata skor keyakinan: **{avg_pos:.3f}%**
+                    - Median: **{med_pos:.3f}%**
+                    - Rentang skor: **{min_pos:.3f}% – {max_pos:.3f}%**
 
                     📉 **Sentimen Negatif**
-                    - Rata-rata skor keyakinan: **{avg_neg:.3f}**
-                    - Median: **{med_neg:.3f}**
-                    - Rentang skor: **{min_neg:.3f} – {max_neg:.3f}**
+                    - Rata-rata skor keyakinan: **{avg_neg:.3f}%**
+                    - Median: **{med_neg:.3f}%**
+                    - Rentang skor: **{min_neg:.3f}% – {max_neg:.3f}%**
 
-                    🎯 Berdasarkan data diatas, rata-rata keyakinan model terhadap prediksi sentimen positif sebesar **{avg_pos:.3f}** dan sentimen negatif sebesar **{avg_neg:.3f}**.
-                    Sebanyak **{high_conf_pct:.1f}%** prediksi memiliki skor keyakinan di atas **0.80**, yang menunjukkan bahwa model **{kualitas_model}** dalam melakukan klasifikasi sentimen pada ulasan aplikasi ini.
+                    🎯 Berdasarkan data diatas, rata-rata keyakinan model terhadap prediksi sentimen positif sebesar **{avg_pos:.3f}%** dan sentimen negatif sebesar **{avg_neg:.3f}%**. Secara keseluruhan,
+                    sebanyak **{high_conf_pct:.1f}%** prediksi memiliki skor keyakinan di atas **0.80**, yang menunjukkan bahwa model **{kualitas_model}**. {perbandingan}.
                     """)
-
-            # # Baris 2: Chart Keluhan per Versi
-            # st.subheader("Persentase Keluhan Berdasarkan Versi Aplikasi")
-            # # --- PERBAIKAN 4: GUNAKAN LABEL TEKS YANG BENAR ---
-            # # Kita filter dataframe hanya untuk sentimen Negatif
-            # df_neg = df[df['sentiment'] == 'Negatif']
-            
-            # # --- PERBAIKAN 5: CEK KEBERADAAN DATA NEGATIF DENGAN BENAR ---
-            # # Kita gunakan .empty, dan ini akan konsisten dengan pie chart
-            # if not df_neg.empty:
-            #     keluhan_versi = df_neg['reviewCreatedVersion'].value_counts().reset_index()
-            #     keluhan_versi.columns = ['Versi', 'Jumlah Keluhan']
-            #     # Tampilkan top 10 versi yang paling banyak dikeluhkan
-            #     keluhan_fig = px.bar(keluhan_versi.head(10), x='Versi', y='Jumlah Keluhan', 
-            #                          text='Jumlah Keluhan', labels={'Jumlah Keluhan':'Jumlah Keluhan'},
-            #                          color_discrete_sequence=['#E74C3C'])
-            #     st.plotly_chart(keluhan_fig, width="stretch")
-            # else:
-            #     st.info("Wah, hebat! Tidak ada keluhan (sentimen negatif) yang ditemukan pada sampel ini.")
             
             st.subheader("Persentase Keluhan Berdasarkan Versi Aplikasi")
             
@@ -389,7 +533,7 @@ if mulai_btn and app_input:
             for text in df[df['sentiment']=='Positif']['cleaned_content'].dropna():
                 words = text.split()
                 bigram_pos.extend(
-                    [" ".join(bg) for bg in ngrams(words, 4)]
+                    [" ".join(bg) for bg in ngrams(words, 1)]
                 )
 
             top_poso = Counter(bigram_pos).most_common(10)
@@ -400,7 +544,7 @@ if mulai_btn and app_input:
             for text in df[df['sentiment']=='Negatif']['cleaned_content'].dropna():
                 words = text.split()
                 bigram_neg.extend(
-                    [" ".join(bg) for bg in ngrams(words, 4)]
+                    [" ".join(bg) for bg in ngrams(words, 1)]
                 )
 
             top_nega = Counter(bigram_neg).most_common(10)
