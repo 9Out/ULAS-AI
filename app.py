@@ -249,7 +249,7 @@ if mulai_btn and app_input:
         st.stop()
     
     # Animasi Loading
-    with st.spinner(f'Sedang mengambil {jumlah_data} ulasan data dari {judul}, membersihkan teks alay, dan menganalisis sentimen... 🚀'):
+    with st.spinner(f'Sedang mengambil **{jumlah_data} ulasan** data dari aplikasi **{judul}**, membersihkan teks alay, dan menganalisis sentimen... 🚀'):
         try:
             # 1. Scraping Data Play Store
             result, _ = reviews(
@@ -593,7 +593,9 @@ if mulai_btn and app_input:
                 )
 
         except Exception as e:
-            st.error(f"Terjadi kesalahan saat memproses data: {e}")
+            st.error(f"Terjadi kesalahan saat memproses data: ")
+            st.caption(str(e))
+            st.stop()
 
 elif mulai_btn and not app_input:
     st.warning("Jangan lupa masukkan Link atau ID Aplikasinya ya!")
