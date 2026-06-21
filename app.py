@@ -229,7 +229,7 @@ if mulai_btn and app_input:
             f"**Genre:** {genre}"
         )
         st.markdown(
-            f"**Rating:** ⭐ {rating_text}"
+            f"**Rating:** {rating_text} ⭐"
         )
         installs = info_app.get("installs", "-")
 
@@ -245,7 +245,7 @@ if mulai_btn and app_input:
     
     # check dulu apakah ada review
     if not total_reviews:
-        st.warning("Sayangnya aplikasi ini belum memiliki ulasan.")
+        st.warning("Sayangnya aplikasi ini belum memiliki ulasan!")
         st.stop()
     
     # Animasi Loading
