@@ -18,8 +18,8 @@ st.set_page_config(page_title="ULAS-AI", layout="wide")
 @st.cache_resource
 def load_model_payload():
     try:
-        # Load file joblib yang baru (v8) yang berisi dictionary
-        return joblib.load('model/playstore_sentiment_pipeline_v8.joblib')
+        # Load file joblib yang baru (v10) yang berisi dictionary
+        return joblib.load('model/playstore_sentiment_pipeline_v10.joblib')
     except Exception as e:
         st.error(f"Gagal memuat model! Pastikan path benar dan library scikit-learn terinstall. Error: {e}")
         st.stop()
@@ -174,8 +174,7 @@ with st.sidebar:
     
     # Tampilkan Metrics
     st.subheader("Performa Model")
-    st.metric(label="Akurasi Eksperimen", value= "97,4%")
-    # st.metric(label="Akurasi Eksperimen", value=f"{metadata['metrics']['accuracy'] * 100}%")
+    st.metric(label="Akurasi Eksperimen", value=f"{metadata['accuracy'] * 100}%")
     st.caption(f"Mean CV Score: {metadata['metrics']['cv_f1_mean']:.4f}")
     
     # Detail Tambahan

@@ -146,28 +146,32 @@ def preprocess_playstore(text: str) -> str:
     
     text = unicodedata.normalize("NFKD", text)
 
-    # Mengubah lagu2, lagu², lagu", lagu' menjadi lagu-lagu
-    text = re.sub(r'\b([a-zA-Z]+)(?:2|²|"|\')', r'\1-\1', text)
-    text = re.sub(r'\b([0-9]+)(?:x|X)', r'\1 kali', text)
+    # 2. Case Folding (Pindah ke paling atas)
+    text = text.lower()
+
+    # Pre-cleaning: Mengubah kata ulang (lagu2, lagu², dll) dan multiplier (3x)
+    # Karena sudah lowercase, regex lebih sederhana
+    text = re.sub(r'\b([a-z]+)(?:2|²|"|\')', r'\1-\1', text)
+    text = re.sub(r'\b([0-9]+)x\b', r'\1 kali', text) # Menambah \b agar tidak salah potong di tengah kata
 
     # 1. Cleaning Tanda Baca, URL, Emoji
+    # Pastikan _RE_URLS dkk regex-nya mendukung lowercase / case-insensitive
     text = _RE_URLS.sub(" ", text)
     text = _RE_MENTIONS.sub(" ", text)
     text = _RE_BRACKETS.sub("", text)
     text = _RE_DASHES.sub("-", text)
     text = _RE_APOS.sub("'", text)
     text = _RE_ZW.sub("", text)
-    
-    # Membuang aksen/Mn jika ada yang tersisa
+
     text = normalize_chars(text)
     text = handle_intraword_symbols(text)
     text = strip_symbol_chars(text)
 
-    # 2. Case Folding
-    text = text.lower()
-
-    # 3. Sisakan Huruf & Angka, lalu rapihkan spasi
-    text = re.sub(r"[^0-9a-z]+", " ", text)
+    # 3. Sisakan Huruf, Angka, & Tanda Hubung (jika kata ulang ingin dipertahankan)
+    # Tambahkan tanda hubung '-' jika ingin 'lagu-lagu' tidak menjadi 'lagu lagu'
+    text = re.sub(r"[^0-9a-z-]+", " ", text) 
+    
+    # Rapihkan spasi berlebih
     text = re.sub(r"\s+", " ", text).strip()
 
     # 4. Normalisasi Plesetan / Kamus Alay
