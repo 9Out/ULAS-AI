@@ -209,6 +209,7 @@ if mulai_btn and app_input:
     judul = info_app["title"]
     icon = info_app["icon"]
     genre = info_app["genre"]
+    total_reviews = info_app["reviews"]
     
     # PENGENALAN APLIKASI
     st.markdown("### 📱 Informasi Aplikasi")
@@ -239,6 +240,11 @@ if mulai_btn and app_input:
     if len(deskripsi) > 1000:
         deskripsi = deskripsi[:600] + "..."
     st.info(deskripsi)
+    
+    # check dulu apakah ada review
+    if not total_reviews:
+        st.warning("Aplikasi ini belum memiliki ulasan.")
+        st.stop()
     
     # Animasi Loading
     with st.spinner(f'Sedang mengambil {jumlah_data} ulasan data dari {judul}, membersihkan teks alay, dan menganalisis sentimen... 🚀'):
@@ -493,12 +499,16 @@ if mulai_btn and app_input:
                 freq = Counter(all_bigrams)
                 
 
-                # hanya ambil bigram yang muncul minimal 3 kali
-                freq = {
-                    k:v
-                    for k,v in freq.items()
-                    if v >= 3
-                }
+                # buat threshold dinamis menyesuaikan review yang ada
+                for threshold in [3, 2, 1]:
+                    filtered_freq = {
+                        k:v for k,v in freq.items()
+                        if v >= threshold
+                    }
+
+                    if len(filtered_freq) >= 5:
+                        freq = filtered_freq
+                        break
 
                 if len(freq) > 0:
 
