@@ -245,7 +245,7 @@ if mulai_btn and app_input:
     
     # check dulu apakah ada review
     if not total_reviews:
-        st.warning("Aplikasi ini belum memiliki ulasan.")
+        st.warning("Sayangnya aplikasi ini belum memiliki ulasan.")
         st.stop()
     
     # Animasi Loading
