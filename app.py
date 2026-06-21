@@ -103,16 +103,16 @@ def get_app_info(input_user):
 # --- UI UTAMA ---
 col_head, col_spacer = st.columns([4, 1])
 with col_head:
-    st.title("📊 Analisis Sentimen Aplikasi Play Store")
-    st.write("Masukkan Link URL play store atau ID aplikasi untuk melihat analisis sentimen dari ulasan terbaru penggunanya.")
+    st.title("📊 Ulas AI")
+    st.write("Sistem analisis sentimen berbasis AI untuk mengklasifikasikan ulasan pengguna suatu aplikasi secara otomatis. Platform ini hadir untuk membantu **mengevaluasi kualitas aplikasi**, **mengidentifikasi keluhan utama**, serta memantau **tren opini** terhadap suatu aplikasi.")
 
 # Input App ID dan Jumlah Data
 col1, col2 = st.columns([4, 1])
 
 with col1:
     app_input = st.text_input(
-        "Link URL / ID Aplikasi Play Store (contoh: com.duolingo)",
-        ""
+        "🔗 Masukkan link URL / ID Aplikasi Play Store",
+        placeholder="Contoh: com.vuclip.viu atau https://play.google.com/store/apps/details?id=com.vuclip.viu"
     )
 
 with col2:
@@ -198,10 +198,7 @@ if mulai_btn and app_input:
 
     if not info_app:
         st.error(
-            "Aplikasi tidak ditemukan di Google Play Store atau App ID tidak valid."
-        )
-        st.error(
-            "Coba cek kembali ID aplikasi atau masukkan URL Play Store yang berisi ID aplikasi."
+            "Aplikasi tidak ditemukan di Google Play Store atau App ID tidak valid.\n\nCoba cek kembali ID aplikasi atau masukkan URL Play Store yang berisi ID aplikasi."
         )
         st.stop()
         
