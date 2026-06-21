@@ -209,7 +209,7 @@ if mulai_btn and app_input:
     judul = info_app["title"]
     icon = info_app["icon"]
     genre = info_app["genre"]
-    core = info_app.get('score', '-')
+    score = info_app.get('score', '-')
     rating_text = f"{score:.2f}" if score is not None else "Belum memiliki rating"
     total_reviews = info_app["reviews"]
     
