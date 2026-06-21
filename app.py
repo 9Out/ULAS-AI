@@ -410,16 +410,16 @@ if mulai_btn and app_input:
                     Model menunjukkan tingkat keyakinan yang cukup tinggi terhadap hasil klasifikasi.
 
                     📈 **Sentimen Positif**
-                    - Rata-rata skor keyakinan: **{avg_pos:.3f}%**
-                    - Median: **{med_pos:.3f}%**
-                    - Rentang skor: **{min_pos:.3f}% – {max_pos:.3f}%**
+                    - Rata-rata skor keyakinan: **{avg_pos:.1f}%**
+                    - Median: **{med_pos:.1f}%**
+                    - Rentang skor: **{min_pos:.1f}% – {max_pos:.1f}%**
 
                     📉 **Sentimen Negatif**
-                    - Rata-rata skor keyakinan: **{avg_neg:.3f}%**
-                    - Median: **{med_neg:.3f}%**
-                    - Rentang skor: **{min_neg:.3f}% – {max_neg:.3f}%**
+                    - Rata-rata skor keyakinan: **{avg_neg:.1f}%**
+                    - Median: **{med_neg:.1f}%**
+                    - Rentang skor: **{min_neg:.1f}% – {max_neg:.1f}%**
 
-                    🎯 Berdasarkan data diatas, rata-rata keyakinan model terhadap prediksi sentimen positif sebesar **{avg_pos:.3f}%** dan sentimen negatif sebesar **{avg_neg:.3f}%**. Secara keseluruhan,
+                    🎯 Berdasarkan data diatas, rata-rata keyakinan model terhadap prediksi sentimen positif sebesar **{avg_pos:.1f}%** dan sentimen negatif sebesar **{avg_neg:.1f}%**. Secara keseluruhan,
                     sebanyak **{high_conf_pct:.1f}%** prediksi memiliki skor keyakinan di atas **0.80**, yang menunjukkan bahwa model **{kualitas_model}**. {perbandingan}.
                     """)
             
