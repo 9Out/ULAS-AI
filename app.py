@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import re
+import numpy as np
 import matplotlib.pyplot as plt
 from google_play_scraper import Sort, reviews, app
 from urllib.parse import urlparse, parse_qs
@@ -319,18 +320,69 @@ if mulai_btn and app_input:
                             .value_counts(normalize=True)
                             .mul(100)
                         )
-            negatif_pct = sentiment_percent['Negatif']
-            positif_pct = sentiment_percent['Positif']
+           
+            # ==============================
+            # Ambil TF-IDF yang ada di Pipeline
+            # ==============================
+            word_vectorizer = dict(
+                model.named_steps["features"].transformer_list
+            )["word"]
+            
+            # ==============================
+            # Fungsi mengambil top term
+            # ==============================
+            def get_top_terms(text_series, vectorizer, top_n=10, min_review_ratio=0.005, only_bigram=False):
 
-            kata_neg = " ".join(
-                df[df['sentiment']=='Negatif']['cleaned_content']
-            ).split()
+                text_series = text_series.dropna()
 
-            # top_pos = Counter(kata_pos).most_common(10)
-            top_neg = Counter(kata_neg).most_common(10)
+                if len(text_series) == 0:
+                    return pd.DataFrame(columns=["Term", "Review", "TF-IDF", "Score"])
 
-            # kata_pos_dominan = top_pos[0][5] if top_pos else "-"
-            kata_neg_dominan = top_neg[:5] if top_neg else "-"
+                X = vectorizer.transform(text_series)
+
+                terms = vectorizer.get_feature_names_out()
+
+                # Rata-rata TF-IDF
+                tfidf_mean = np.asarray(X.mean(axis=0)).ravel()
+
+                # Jumlah review yang mengandung term
+                doc_freq = np.asarray((X > 0).sum(axis=0)).ravel()
+
+                total_docs = len(text_series)
+
+                df_term = pd.DataFrame({
+                    "Term": terms,
+                    "TF-IDF": tfidf_mean,
+                    "Review": doc_freq
+                })
+
+                # ===== Filter Bigram =====
+                if only_bigram:
+                    df_term = df_term[
+                        df_term["Term"].str.count(" ") == 1
+                    ]
+
+                # Minimal muncul pada sekian persen review
+                min_review = max(
+                    5,
+                    int(total_docs * min_review_ratio)
+                )
+
+                df_term = df_term[
+                    df_term["Review"] >= min_review
+                ]
+
+                # Skor = TF-IDF * (Jumlah Review / Total Review)
+                df_term["Score"] = (
+                    df_term["TF-IDF"] *
+                    (df_term["Review"] / total_docs)
+                )
+                
+                return (
+                    df_term
+                    .sort_values("Score", ascending=False)
+                    .head(top_n)
+                )
                         
             
             # Baris 1: Pie Chart & Bar Chart
@@ -458,6 +510,27 @@ if mulai_btn and app_input:
                     color_discrete_sequence=['#E74C3C']
                 )
                 st.plotly_chart(keluhan_fig, width="stretch")
+                
+                versi_tertinggi = keluhan_versi.iloc[0]
+            
+                # Filter hanya review negatif pada versi tersebut
+                df_versi = df_neg[
+                    df_neg["reviewCreatedVersion"] ==
+                    versi_tertinggi["Versi"]
+                ]
+
+                # Ambil topik menggunakan TF-IDF
+                top_issue = get_top_terms(
+                    df_versi["cleaned_content"],
+                    word_vectorizer,
+                    top_n=5,
+                    only_bigram=True
+                )
+
+                kata_neg_dominan = ", ".join(
+                    top_issue["Term"].tolist()
+                )
+                
             else:
                 st.info("Wah, hebat! Tidak ada keluhan (sentimen negatif) yang ditemukan pada sampel ini.")
             
@@ -483,79 +556,64 @@ if mulai_btn and app_input:
             st.subheader("Kata yang Paling Sering Muncul (Wordcloud)")
             col3, col4 = st.columns(2)
             
-            def generate_wordcloud(text_data, title, colormap):
+            def generate_wordcloud(text_series, title, color):
 
-                all_bigrams = []
+                top_terms = get_top_terms(
+                    text_series,
+                    word_vectorizer,
+                    top_n=200,
+                    only_bigram=True
+                )
 
-                for review in text_data.dropna():
-                    words = review.split()
+                if top_terms.empty:
+                    return None
 
-                    all_bigrams.extend(
-                        [" ".join(bg) for bg in ngrams(words, 2)]
+                frequencies = dict(
+                    zip(
+                        top_terms["Term"],
+                        top_terms["Score"]
                     )
+                )
 
-                freq = Counter(all_bigrams)
-                
+                wc = WordCloud(
+                    width=900,
+                    height=450,
+                    background_color="white",
+                    colormap=color
+                ).generate_from_frequencies(frequencies)
 
-                # buat threshold dinamis menyesuaikan review yang ada
-                for threshold in [3, 2, 1]:
-                    filtered_freq = {
-                        k:v for k,v in freq.items()
-                        if v >= threshold
-                    }
+                fig, ax = plt.subplots(figsize=(10,5))
+                ax.imshow(wc, interpolation="bilinear")
+                ax.axis("off")
+                ax.set_title(title)
 
-                    if len(filtered_freq) >= 5:
-                        freq = filtered_freq
-                        break
+                return fig
 
-                if len(freq) > 0:
-
-                    wc = WordCloud(
-                        width=800,
-                        height=400,
-                        background_color='white',
-                        colormap=colormap
-                    ).generate_from_frequencies(freq)
-
-                    fig, ax = plt.subplots(figsize=(8,4))
-                    ax.imshow(wc, interpolation='bilinear')
-                    ax.axis("off")
-                    ax.set_title(title)
-
-                    return fig
-
-                return None
             
             with col3:
-                fig_pos = generate_wordcloud(df[df['sentiment'] == 'Positif']['cleaned_content'], 'Bigram Positif', 'Greens')
-                if fig_pos: st.pyplot(fig_pos)
+                fig_pos = generate_wordcloud(df[df['sentiment'] == 'Positif']['cleaned_content'], 'WordCloud Positif', 'Greens')
+                if fig_pos: 
+                    st.pyplot(fig_pos)
                 
             with col4:
-                fig_neg = generate_wordcloud(df_neg['cleaned_content'], 'Bigram Negatif', 'Reds')
-                if fig_neg: st.pyplot(fig_neg)
+                fig_neg = generate_wordcloud(df_neg['cleaned_content'], 'WordCloud Negatif', 'Reds')
+                if fig_neg: 
+                    st.pyplot(fig_neg)
                 
-                
-            # Positif
-            bigram_pos = []
+            # Top 10 Term    
+            top_pos = get_top_terms(
+                df[df["sentiment"]=="Positif"]["cleaned_content"],
+                word_vectorizer,
+                top_n=10,
+                only_bigram=True
+            )
 
-            for text in df[df['sentiment']=='Positif']['cleaned_content'].dropna():
-                words = text.split()
-                bigram_pos.extend(
-                    [" ".join(bg) for bg in ngrams(words, 1)]
-                )
-
-            top_poso = Counter(bigram_pos).most_common(10)
-
-            # Negatif
-            bigram_neg = []
-
-            for text in df[df['sentiment']=='Negatif']['cleaned_content'].dropna():
-                words = text.split()
-                bigram_neg.extend(
-                    [" ".join(bg) for bg in ngrams(words, 1)]
-                )
-
-            top_nega = Counter(bigram_neg).most_common(10)
+            top_neg = get_top_terms(
+                df[df["sentiment"]=="Negatif"]["cleaned_content"],
+                word_vectorizer,
+                top_n=10,
+                only_bigram=True
+            )
 
             st.markdown("---")
             st.subheader("Top 10 Kata Dominan")
@@ -563,30 +621,82 @@ if mulai_btn and app_input:
             col5, col6 = st.columns(2)
 
             with col5:
-                st.write("### Sentimen Positif")
-
-                df_top_pos = pd.DataFrame(
-                    top_poso,
-                    columns=["Kata", "Frekuensi"]
-                )
+                st.write("#### Sentimen Positif")
 
                 st.dataframe(
-                    df_top_pos,
-                    width="stretch"
+                    top_pos[["Term","Review"]],
+                    width="stretch",
+                    hide_index=True
                 )
 
             with col6:
-                st.write("### Sentimen Negatif")
+                st.write("#### Sentimen Negatif")
 
-                df_top_neg = pd.DataFrame(
-                    top_nega,
-                    columns=["Kata", "Frekuensi"]
+                st.dataframe(
+                    top_neg[["Term","Review"]],
+                    width="stretch",
+                    hide_index=True
                 )
                 
-                st.dataframe(
-                    df_top_neg,
-                    width="stretch"
-                )
+            # Probabilitas prediksi
+            proba = model.predict_proba(df["cleaned_content"])
+            df["jumlah_kata"] = df["cleaned_content"].str.split().str.len()
+
+            df["Prob_Negatif"] = proba[:, 0]
+            df["Prob_Positif"] = proba[:, 1]
+            
+            top_review_pos = (
+                df[
+                    (df["sentiment"]=="Positif") &
+                    (df["jumlah_kata"]>=5) &
+                    (df["Prob_Positif"]>=0.90)
+                ]
+                .sort_values("Prob_Positif", ascending=False)
+                .head(5)
+            )
+            
+            top_review_neg = (
+                df[
+                    (df["sentiment"]=="Negatif") &
+                    (df["jumlah_kata"]>=5) &
+                    (df["Prob_Negatif"]>=0.90)
+                ]
+                .sort_values("Prob_Negatif", ascending=False)
+                .head(5)
+            )
+            
+            # ULASAN REPRESENTATIF
+            st.markdown("---")
+            st.subheader("💬 5 Ulasan Paling Representatif")
+            
+            col7, col8 = st.columns(2)
+            
+            with col7:
+                st.write("#### Sentimen Positif")
+                for _, row in top_review_pos.iterrows():
+
+                    with st.container(border=True):
+
+                        st.markdown(
+                            f"🟢 **Keyakinan Model:** {row['Prob_Positif']*100:.2f}%"
+                        )
+
+                        st.write(row["content"])
+                        # st.write(row["cleaned_content"])
+                    
+                    
+            with col8:
+                st.write("#### Sentimen Negatif")
+                for _, row in top_review_neg.iterrows():
+
+                    with st.container(border=True):
+
+                        st.markdown(
+                            f"🔴 **Keyakinan Model:** {row['Prob_Negatif']*100:.2f}%"
+                        )
+
+                        st.write(row["content"])
+                        # st.write(row["cleaned_content"])
 
         except Exception as e:
             st.error(f"Terjadi kesalahan saat memproses data: ")
