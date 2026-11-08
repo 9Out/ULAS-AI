@@ -78,14 +78,14 @@ The application architecture is relatively simple and follows a direct data-proc
 
 ```mermaid
 flowchart LR
-    A[User input: Play Store URL or App ID] --> B[get_app_info() in app.py]
-    B --> C[google_play_scraper.app() / reviews()]
-    C --> D[DataFrame of review text + metadata]
-    D --> E[preprocess_playstore()]
-    E --> F[Loaded ML pipeline from model/*.joblib]
-    F --> G[Sentiment prediction: Positif / Negatif]
-    G --> H[Plotly charts, confidence metrics, complaint summaries]
-    H --> I[Streamlit dashboard]
+    A["User input: Play Store URL or App ID"] --> B["get_app_info() in app.py"]
+    B --> C["google_play_scraper.app() / reviews()"]
+    C --> D["DataFrame of review text + metadata"]
+    D --> E["preprocess_playstore()"]
+    E --> F["Loaded ML pipeline from model/*.joblib"]
+    F --> G["Sentiment prediction: Positif / Negatif"]
+    G --> H["Plotly charts, confidence metrics, complaint summaries"]
+    H --> I["Streamlit dashboard"]
 ```
 
 
@@ -168,7 +168,3 @@ The project includes several dashboard screenshots in `tampilan_web/`:
 ## License
 
 This project is distributed under the MIT License. The full license text is available in `LICENSE`.
-
-## Summary
-
-ULAS-AI is a practical, research-oriented sentiment analysis dashboard for Google Play Store reviews. It combines live review scraping, multilingual/informal text normalization, machine learning classification, and interactive visual analytics into a single Streamlit application. The project is a usable example of applying NLP and classification techniques to app-user feedback analysis in an Indonesian-language context.
